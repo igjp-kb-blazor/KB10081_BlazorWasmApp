@@ -1,0 +1,109 @@
+﻿@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
+
+<main class="container">
+
+    <!-- ドックマネージャー -->
+    <IgbDockManager id="dockmanager1" Layout="this._InitialLayout" Width="800px" Height="400px">
+        <div slot="pane1">
+            Hello
+        </div>
+        <div slot="pane2">
+            World
+        </div>
+    </IgbDockManager>
+
+    <!-- 最大化状態の変更を起動するボタン群 -->
+    <p>
+        <IgbButton Variant="ButtonVariant.Contained" @onclick="OnClickMaximizePane1">
+            Pane 1 を最大化する
+        </IgbButton>
+
+        <IgbButton Variant="ButtonVariant.Contained" @onclick="OnClickMaximizePane2">
+            Pane 2 を最大化する
+        </IgbButton>
+
+        <IgbButton Variant="ButtonVariant.Contained" @onclick="OnClickReleaseMaximize">
+            最大化を解除する
+        </IgbButton>
+    </p>
+
+</main>
+
+@code
+{
+    #pragma warning disable BL0005
+    /// <summary>
+    /// ドックマネージャーの初期レイアウト
+    /// </summary>
+    private readonly IgbDockManagerLayout _InitialLayout = new IgbDockManagerLayout()
+        {
+            RootPane = new IgbSplitPane
+            {
+                PaneType = DockManagerPaneType.SplitPane,
+                Orientation = SplitPaneOrientation.Horizontal,
+                Panes = new IgbDockManagerPaneCollection
+                {
+                    new IgbContentPane
+                    {
+                        PaneType = DockManagerPaneType.ContentPane,
+                        Header = "Pane 1",
+                        ContentId = "pane1"
+                    },
+                    new IgbContentPane
+                    {
+                        PaneType = DockManagerPaneType.ContentPane,
+                        Header = "Pane 2",
+                        ContentId = "pane2"
+                    }
+                }
+            }
+        };
+#pragma warning restore BL0005
+
+    private IJSObjectReference? _JSModule;
+
+    /// <summary>
+    /// JavaScript ファイル "App.razor.js" を JavaScript モジュールとして読み込んで返します。
+    /// </summary>
+    private async ValueTask<IJSObjectReference> GetJSModuleAsync()
+    {
+        if (this._JSModule == null)
+        {
+            this._JSModule = await this.JSRuntime.InvokeAsync<IJSObjectReference>("import", "./App.razor.js");
+        }
+        return this._JSModule;
+    }
+
+    /// <summary>
+    /// [Pane 1 を最大化する] ボタンがクリックされたときに呼び出されます。
+    /// </summary>
+    private async Task OnClickMaximizePane1()
+    {
+        var module = await this.GetJSModuleAsync();
+        await module.InvokeVoidAsync("setMaximizedPane", "#dockmanager1", "pane1");
+    }
+
+    /// <summary>
+    /// [Pane 2 を最大化する] ボタンがクリックされたときに呼び出されます。
+    /// </summary>
+    private async Task OnClickMaximizePane2()
+    {
+        var module = await this.GetJSModuleAsync();
+        await module.InvokeVoidAsync("setMaximizedPane", "#dockmanager1", "pane2");
+    }
+
+    /// <summary>
+    /// [最大化を解除する] ボタンがクリックされたときに呼び出されます。
+    /// </summary>
+    private async Task OnClickReleaseMaximize()
+    {
+        var module = await this.GetJSModuleAsync();
+        await module.InvokeVoidAsync("setMaximizedPane", "#dockmanager1", null);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (this._JSModule != null) try { await this._JSModule.DisposeAsync(); } catch (JSDisconnectedException) { }
+    }
+}
